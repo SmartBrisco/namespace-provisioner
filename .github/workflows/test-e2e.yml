@@ -1,8 +1,11 @@
 name: E2E Tests
-
 on:
   push:
+    branches-ignore:
+      - '**'  # disabled until e2e tests are written
   pull_request:
+    branches-ignore:
+      - '**'
 
 jobs:
   test-e2e:
