@@ -20,42 +20,60 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// RBACSpec defines the RBAC configuration for the namespace
+type RBACSpec struct {
+	// admins is a list of users with admin access to the namespace
+	// +kubebuilder:validation:MinItems=1
+	Admins []string `json:"admins"`
+	// viewers is a list of users with read-only access to the namespace
+	// +optional  
+	Viewers []string `json:"viewers,omitempty"`
+}
+
+// ResourceQuotaSpec defines the resource limits for the namespace
+type ResourceQuotaSpec struct {
+	// cpu is the maximum CPU allocation for the namespace
+	// +kubebuilder:validation:Required
+	CPU string `json:"cpu"`
+	// memory is the maximum memory allocation for the namespace
+	// +kubebuilder:validation:Required
+	Memory string `json:"memory"`
+}
 
 // ManagedNamespaceSpec defines the desired state of ManagedNamespace
 type ManagedNamespaceSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// The following markers will use OpenAPI v3 schema to validate the value
-	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
+	// team is the name of the team that owns this namespace
+	// +kubebuilder:validation:Required
+	Team string `json:"team"`
 
-	// foo is an example field of ManagedNamespace. Edit managednamespace_types.go to remove/update
-	// +optional
-	Foo *string `json:"foo,omitempty"`
+	// environment is the deployment environment (dev, staging, prod)
+	// +kubebuilder:validation:Enum=dev;staging;prod
+	Environment string `json:"environment"`
+
+	// resourceQuota defines CPU and memory limits for the namespace
+	// +kubebuilder:validation:Required
+	ResourceQuota ResourceQuotaSpec `json:"resourceQuota"`
+
+	// rbac defines admin and viewer access for the namespace
+	// +kubebuilder:validation:Required
+	RBAC RBACSpec `json:"rbac"`
 }
 
-// ManagedNamespaceStatus defines the observed state of ManagedNamespace.
+// ManagedNamespaceStatus defines the observed state of ManagedNamespace
 type ManagedNamespaceStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// For Kubernetes API conventions, see:
-	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
-
-	// conditions represent the current state of the ManagedNamespace resource.
-	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
-	//
-	// Standard condition types include:
-	// - "Available": the resource is fully functional
-	// - "Progressing": the resource is being created or updated
-	// - "Degraded": the resource failed to reach or maintain its desired state
-	//
-	// The status of each condition is one of True, False, or Unknown.
+	// conditions represent the current state of the ManagedNamespace resource
 	// +listType=map
 	// +listMapKey=type
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// namespaceName is the name of the provisioned namespace
+	// +optional
+	NamespaceName string `json:"namespaceName,omitempty"`
+
+	// phase is the current phase of the namespace provisioning
+	// +optional
+	Phase string `json:"phase,omitempty"`
 }
 
 // +kubebuilder:object:root=true
