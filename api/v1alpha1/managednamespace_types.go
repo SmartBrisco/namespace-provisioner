@@ -26,7 +26,7 @@ type RBACSpec struct {
 	// +kubebuilder:validation:MinItems=1
 	Admins []string `json:"admins"`
 	// viewers is a list of users with read-only access to the namespace
-	// +optional  
+	// +optional
 	Viewers []string `json:"viewers,omitempty"`
 }
 
