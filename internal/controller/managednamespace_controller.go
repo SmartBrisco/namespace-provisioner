@@ -18,8 +18,15 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -36,22 +43,122 @@ type ManagedNamespaceReconciler struct {
 // +kubebuilder:rbac:groups=platform.platform.io,resources=managednamespaces,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=platform.platform.io,resources=managednamespaces/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=platform.platform.io,resources=managednamespaces/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="",resources=resourcequotas,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ManagedNamespace object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.23.1/pkg/reconcile
 func (r *ManagedNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = logf.FromContext(ctx)
+	log := logf.FromContext(ctx)
 
-	// TODO(user): your logic here
+	var managedNS platformv1alpha1.ManagedNamespace
+	if err := r.Get(ctx, req.NamespacedName, &managedNS); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("ManagedNamespace resource not found")
+			return ctrl.Result{}, nil
+		}
+		log.Error(err, "Failed to get ManagedNamespace")
+		return ctrl.Result{}, err
+	}
+
+	namespaceName := managedNS.Spec.Team + "-" + managedNS.Spec.Environment
+
+	if err := r.reconcileNamespace(ctx, &managedNS, namespaceName); err != nil {
+		log.Error(err, "Failed to reconcile namespace")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileResourceQuota(ctx, &managedNS, namespaceName); err != nil {
+		log.Error(err, "Failed to reconcile resource quota")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileRBAC(ctx, &managedNS, namespaceName); err != nil {
+		log.Error(err, "Failed to reconcile RBAC")
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *ManagedNamespaceReconciler) reconcileNamespace(ctx context.Context, managedNS *platformv1alpha1.ManagedNamespace, namespaceName string) error {
+	ns := &corev1.Namespace{}
+	err := r.Get(ctx, types.NamespacedName{Name: namespaceName}, ns)
+	if apierrors.IsNotFound(err) {
+		ns = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: namespaceName,
+				Labels: map[string]string{
+					"managed-by":  "namespace-provisioner",
+					"team":        managedNS.Spec.Team,
+					"environment": managedNS.Spec.Environment,
+				},
+			},
+		}
+		return r.Create(ctx, ns)
+	}
+	return err
+}
+
+func (r *ManagedNamespaceReconciler) reconcileResourceQuota(ctx context.Context, managedNS *platformv1alpha1.ManagedNamespace, namespaceName string) error {
+	quota := &corev1.ResourceQuota{}
+	err := r.Get(ctx, types.NamespacedName{Name: "default-quota", Namespace: namespaceName}, quota)
+	if apierrors.IsNotFound(err) {
+		quota = &corev1.ResourceQuota{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "default-quota",
+				Namespace: namespaceName,
+			},
+			Spec: corev1.ResourceQuotaSpec{
+				Hard: corev1.ResourceList{
+					corev1.ResourceLimitsCPU:    resource.MustParse(managedNS.Spec.ResourceQuota.CPU),
+					corev1.ResourceLimitsMemory: resource.MustParse(managedNS.Spec.ResourceQuota.Memory),
+				},
+			},
+		}
+		return r.Create(ctx, quota)
+	}
+	return err
+}
+
+func (r *ManagedNamespaceReconciler) reconcileRBAC(ctx context.Context, managedNS *platformv1alpha1.ManagedNamespace, namespaceName string) error {
+	if err := r.reconcileRoleBinding(ctx, namespaceName, "admin-binding", "admin", managedNS.Spec.RBAC.Admins); err != nil {
+		return err
+	}
+	if len(managedNS.Spec.RBAC.Viewers) > 0 {
+		if err := r.reconcileRoleBinding(ctx, namespaceName, "viewer-binding", "view", managedNS.Spec.RBAC.Viewers); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *ManagedNamespaceReconciler) reconcileRoleBinding(ctx context.Context, namespaceName, bindingName, roleName string, users []string) error {
+	rb := &rbacv1.RoleBinding{}
+	err := r.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: namespaceName}, rb)
+	if apierrors.IsNotFound(err) {
+		subjects := make([]rbacv1.Subject, len(users))
+		for i, user := range users {
+			subjects[i] = rbacv1.Subject{
+				Kind:     "User",
+				Name:     user,
+				APIGroup: "rbac.authorization.k8s.io",
+			}
+		}
+		rb = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      bindingName,
+				Namespace: namespaceName,
+			},
+			Subjects: subjects,
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     roleName,
+			},
+		}
+		return r.Create(ctx, rb)
+	}
+	return err
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -61,3 +168,6 @@ func (r *ManagedNamespaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("managednamespace").
 		Complete(r)
 }
+
+// Ensure fmt is used
+var _ = fmt.Sprintf
