@@ -107,6 +107,10 @@ make test
 
 Current coverage: 70.2%
 
+![Operator running](screenshots/operator_running.png)
+![Namespace provisioned](screenshots/namespace_provisioned.png)
+
+
 ## Design Decisions
 
 **Why Kubebuilder?**
