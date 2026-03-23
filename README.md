@@ -142,5 +142,5 @@ Enforces a consistent naming standard across the cluster. A namespace named `pay
 - **Project 1** — [Argo Events CI/CD Pipeline](https://github.com/SmartBrisco/argo-event-pipeline) — Event-driven application pipeline with AI-powered failure analysis
 - **Project 2** — [GitOps Infrastructure Pipeline](https://github.com/SmartBrisco/gitops-infra-pipeline) — GitHub Actions and Terraform infrastructure automation
 - **Project 3** — [Platform Observability Stack](https://github.com/SmartBrisco/platform-observability) — Unified observability with OpenTelemetry, Jaeger, Prometheus, and Grafana observing this pipeline
-- **Project 4** — [Namespace Provisioner] (this project) (https://github.com/SmartBrisco/namespace-provisioner) — Kubernetes operator in Go for policy-enforced namespace provisioning
+- **Project 4** — [Namespace Provisioner](https://github.com/SmartBrisco/namespace-provisioner) (this project) — Kubernetes operator in Go for policy-enforced namespace provisioning
 - **Bootstrap** — [Platform](https://github.com/SmartBrisco/Platform) — One command to spin up the full platform locally in under 10 minutes
