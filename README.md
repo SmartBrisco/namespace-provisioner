@@ -139,8 +139,8 @@ Enforces a consistent naming standard across the cluster. A namespace named `pay
 
 ## Part of a Platform Engineering Portfolio
 
-- **[namespace-provisioner](https://github.com/SmartBrisco/namespace-provisioner)** — Kubernetes operator for policy-enforced namespace provisioning (this repo)
-- **[gitops-infra-pipeline](https://github.com/SmartBrisco/gitops-infra-pipeline)** — Multi-cloud Terraform with Kargo progressive delivery, security gates, and manual approval across AWS, GCP, and Azure
-- **[argo-event-pipeline](https://github.com/SmartBrisco/argo-event-pipeline)** — Event-driven CI/CD pipeline with AI-powered failure analysis
-- **[platform-observability](https://github.com/SmartBrisco/platform-observability)** — Unified observability with OpenTelemetry, Jaeger, Prometheus, and Grafana
-- **[Platform](https://github.com/SmartBrisco/Platform)** — One command to spin up the full platform locally
+- **Project 1** — [Argo Events CI/CD Pipeline] — Event-driven application pipeline with AI-powered failure analysis
+- **Project 2** — [GitOps Infrastructure Pipeline](https://github.com/SmartBrisco/gitops-infra-pipeline) — GitHub Actions and Terraform infrastructure automation
+- **Project 3** — [Platform Observability Stack](https://github.com/SmartBrisco/platform-observability) — Unified observability with OpenTelemetry, Jaeger, Prometheus, and Grafana observing this pipeline
+- **Project 4** — [Namespace Provisioner] (this project) (https://github.com/SmartBrisco/namespace-provisioner) — Kubernetes operator in Go for policy-enforced namespace provisioning
+- **Bootstrap** — [Platform](https://github.com/SmartBrisco/Platform) — One command to spin up the full platform locally in under 10 minutes
