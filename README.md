@@ -9,6 +9,7 @@ In large Kubernetes environments, namespaces get created ad hoc -- missing resou
 ## How It Works
 
 Define a `ManagedNamespace` resource. The operator reconciles it into a fully configured environment automatically.
+
 ```yaml
 apiVersion: platform.platform.io/v1alpha1
 kind: ManagedNamespace
@@ -38,6 +39,7 @@ The operator provisions:
 **Deletion:** Deleting a `ManagedNamespace` resource removes the provisioned namespace and all owned resources via Kubernetes garbage collection. The controller sets owner references on all created resources so cleanup is automatic.
 
 ## Architecture
+
 ```
 ManagedNamespace CRD applied
         ↓
@@ -54,6 +56,7 @@ Reconciliation loop runs
 ```
 
 ## Repository Structure
+
 ```
 namespace-provisioner/
 ├── api/v1alpha1/
@@ -65,6 +68,9 @@ namespace-provisioner/
 │   ├── crd/bases/                              # Generated CRD manifests
 │   ├── rbac/                                   # Operator RBAC permissions
 │   └── samples/                               # Example ManagedNamespace manifests
+├── test/
+│   ├── e2e/                                    # Ginkgo e2e suite
+│   └── utils/                                  # Test utilities
 ├── cmd/
 │   └── main.go                                # Operator entrypoint
 └── Dockerfile                                 # Container image
@@ -80,21 +86,25 @@ namespace-provisioner/
 ## Running Locally
 
 ### 1. Install the CRD
+
 ```bash
 make install
 ```
 
 ### 2. Run the operator
+
 ```bash
 make run
 ```
 
 ### 3. Apply a sample manifest
+
 ```bash
 kubectl apply -f config/samples/platform_v1alpha1_managednamespace.yaml
 ```
 
 ### 4. Verify
+
 ```bash
 kubectl get namespaces | grep payments-dev
 kubectl get resourcequota -n payments-dev
@@ -102,6 +112,7 @@ kubectl get rolebindings -n payments-dev
 ```
 
 ### 5. Verify drift correction
+
 ```bash
 # Delete a RoleBinding manually
 kubectl delete rolebinding admin-binding -n payments-dev
@@ -110,12 +121,23 @@ kubectl delete rolebinding admin-binding -n payments-dev
 kubectl get rolebindings -n payments-dev
 ```
 
-## Running Tests
+## Testing
+
+### Unit tests
+
 ```bash
 make test
 ```
 
-Current coverage: 70.2%
+Controller tests using envtest. Current coverage: 70.2%
+
+### End-to-end tests
+
+```bash
+make test-e2e
+```
+
+Full e2e suite using Ginkgo/Gomega. Builds the operator image, loads it into a kind cluster, installs cert-manager, deploys the controller, and validates controller pod health and authenticated metrics endpoint availability.
 
 ![Operator running](screenshots/operator_running.png)
 ![Namespace provisioned](screenshots/namespace_provisioned.png)
@@ -141,6 +163,6 @@ Enforces a consistent naming standard across the cluster. A namespace named `pay
 
 - **Project 1** — [Argo Events CI/CD Pipeline](https://github.com/SmartBrisco/argo-event-pipeline) — Event-driven application pipeline with AI-powered failure analysis
 - **Project 2** — [GitOps Infrastructure Pipeline](https://github.com/SmartBrisco/gitops-infra-pipeline) — GitHub Actions and Terraform infrastructure automation
-- **Project 3** — [Platform Observability Stack](https://github.com/SmartBrisco/platform-observability) — Unified observability with OpenTelemetry, Jaeger, Prometheus, and Grafana observing this pipeline
+- **Project 3** — [Platform Observability Stack](https://github.com/SmartBrisco/platform-observability) — Unified observability with OpenTelemetry, Jaeger, Prometheus, and Grafana
 - **Project 4** — [Namespace Provisioner](https://github.com/SmartBrisco/namespace-provisioner) (this project) — Kubernetes operator in Go for policy-enforced namespace provisioning
-- **Bootstrap** — [Platform](https://github.com/SmartBrisco/Platform) — One command to spin up the full platform locally in under 10 minutes
+- **Bootstrap** — [Internal Developer Platform](https://github.com/SmartBrisco/Internal-Developer-Platform) — One command to spin up the full platform locally in under 10 minutes
